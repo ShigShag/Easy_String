@@ -1,11 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
-#define RETURN_ON_NULL(x) if(x == NULL) return;
+#define RETURN_VOID_ON_NULL(x) if(x == NULL) return;
+#define RETURN_FALSE_ON_NULL(x) if(x == NULL) return false;
+#define RETURN_ZERO_ON_NULL(x) if(x == NULL) return 0;
 
 typedef unsigned long s_size;
 
+// #ifndef TRUE
+// #define TRUE (1)
+// #endif
+
+// #ifndef FALSE
+// #define FALSE (0)
+// #endif
 
 void str_error_log(const char *file, const char *function, int line, char *msg){
 	fprintf(stderr, "%s: In function '%s'\n%s:%d: error: %s\n", file, function, file, line, msg);
@@ -81,6 +91,30 @@ unsigned long str_strlen(char *str){
 // Get generic string
 #define generic_str(str_) _Generic((str_), str: str_.data, str_buf: str_.data, str_buf_mut: str_.data, default: "")
 
+bool str_contains(str *str_, str sequence){
+	RETURN_FALSE_ON_NULL(str_)
+
+	if(sequence.length == 0 || sequence.length > str_->length) return false;
+
+	s_size counter = 0;
+
+	for(s_size i = 0;i < str_->length;i++){
+		if(counter == sequence.length){
+			break;
+		}
+
+		if(str_->data[i] == sequence.data[counter]){
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return counter < sequence.length ? false : true;
+}
+
 // Create a string buffer
 str_buf str_buf_make(s_size capacity, allocater_t allocater){
 	str_buf buff = 
@@ -96,7 +130,7 @@ str_buf str_buf_make(s_size capacity, allocater_t allocater){
 }
 
 void str_buf_append(str_buf *str_buf_, str str_){
-	RETURN_ON_NULL(str_buf_)
+	RETURN_VOID_ON_NULL(str_buf_)
 
 	s_size bytes_left = str_buf_->capacity - str_buf_->length;
 	s_size bytes_to_copy = (bytes_left >= str_.length) ? str_.length : str_.length - (str_.length - bytes_left);
@@ -107,7 +141,7 @@ void str_buf_append(str_buf *str_buf_, str str_){
 }
 
 void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
-	RETURN_ON_NULL(str_buf_)
+	RETURN_VOID_ON_NULL(str_buf_)
 
 	// Check if index is within the length of the current string
 	if(str_buf_->length <= index){
@@ -119,7 +153,8 @@ void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
 
 	// if there is not enough space
 	if(bytes_left < str_.length){
-		
+		LOG("Not enough capacity");
+		return;
 	}
 
 	for(s_size i = index;(i - index) != str_.length;i++){
@@ -128,6 +163,30 @@ void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
 		str_buf_->data[i] = str_.data[i - index];
 		str_buf_->length++;
 	}
+}
+
+bool str_buf_contains(str_buf *str_buf_, str sequence){
+	RETURN_FALSE_ON_NULL(str_buf_)
+
+	if(sequence.length == 0 || sequence.length > str_buf_->length) return false;
+
+	s_size counter = 0;
+
+	for(s_size i = 0;i < str_buf_->length;i++){
+		if(counter == sequence.length){
+			break;
+		}
+
+		if(str_buf_->data[i] == sequence.data[counter]){
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return counter < sequence.length ? false : true;
 }
 
 // initialize a string buffer
@@ -157,7 +216,7 @@ str_buf_mut str_buf_mut_make(s_size capacity, allocater_t allocater, reallocater
 }
 
 void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, s_size new_capacity){
-	RETURN_ON_NULL(str_buf_mut_)
+	RETURN_VOID_ON_NULL(str_buf_mut_)
 
 	char *temporary = str_buf_mut_->reallocater(str_buf_mut_->data, new_capacity);
 	if(temporary == NULL){
@@ -169,7 +228,7 @@ void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, s_size new_capacity){
 }
 
 void str_buf_mut_append(str_buf_mut *str_buf_mut_, str str_){
-	RETURN_ON_NULL(str_buf_mut_)
+	RETURN_VOID_ON_NULL(str_buf_mut_)
 
 	s_size bytes_left = str_buf_mut_->capacity - str_buf_mut_->length;
 
@@ -184,7 +243,7 @@ void str_buf_mut_append(str_buf_mut *str_buf_mut_, str str_){
 }
 
 void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
-	RETURN_ON_NULL(str_buf_mut_)
+	RETURN_VOID_ON_NULL(str_buf_mut_)
 
 	// Check if index is within the length of the current string
 	if(str_buf_mut_->length <= index){
@@ -208,6 +267,30 @@ void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
 	}
 }
 
+bool str_buf_mut_contains(str_buf_mut *str_buf_mut_, str sequence){
+	RETURN_FALSE_ON_NULL(str_buf_mut_)
+
+	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
+
+	s_size counter = 0;
+
+	for(s_size i = 0;i < str_buf_mut_->length;i++){
+		if(counter == sequence.length){
+			break;
+		}
+
+		if(str_buf_mut_->data[i] == sequence.data[counter]){
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return counter < sequence.length ? false : true;
+}
+
 // Initialize a string buffer
 str_buf_mut cstr_buf_mut(char *str_, s_size capacity, allocater_t allocater, reallocater_t reallocater){
 	str_buf_mut buff = str_buf_mut_make(capacity, allocater, reallocater);
@@ -220,7 +303,10 @@ void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
 }
 
 // Template for str_buf and str_buf_mut
+#define cstr_delete(str_buf_x, deallocater) _Generic(str_buf_x, str_buf *: str_buf_delete, str_buf_mut *: str_buf_mut_delete)(str_buf_x, deallocater)
 #define cstr_append(str_buf_x, str_) _Generic(str_buf_x, str_buf *: str_buf_append, str_buf_mut *: str_buf_mut_append)(str_buf_x, str_)
+#define cstr_insert(str_buf_x, str_, index) _Generic(str_buf_x, str_buf *: str_buf_insert, str_buf_mut *: str_buf_mut_insert)(str_buf_x, str_, index)
+#define cstr_contains(str_buf_x, sequence) _Generic(str_buf_x, str *: str_contains, str_buf *: str_buf_contains, str_buf_mut *: str_buf_mut_contains)(str_buf_x, sequence)
 
 int main (int argc, char *argv[])
 {
@@ -248,15 +334,17 @@ int main (int argc, char *argv[])
 	// str_buf_mut_append(&b, cstr("Hello"));
 	// cstr_append(&b, cstr("fgeogjwerogjerogjerogjerogj"));
 
-	str_buf_mut b = cstr_buf_mut("Hello", 5, calloc, realloc);
+	// str_buf c = cstr_buf("Hello World", 30, calloc);
+	// printf("%s --- %lu --- %lu\n", c.data, c.capacity, c.length);
+	// cstr_insert(&c, cstr("my name issssssssss"), 7);
+	// printf("%s --- %lu --- %lu\n", c.data, c.capacity, c.length);
 
-	printf("%s --- %lu --- %lu\n", b.data, b.capacity, b.length);
-	printf("%s\n", generic_str(b));
+	// cstr_delete(&c, free);
 
-	str_buf_mut_insert(&b, cstr("World"), 55);
-	printf("%s --- %lu --- %lu\n", b.data, b.capacity, b.length);
-	printf("%s\n", generic_str(b));
-	str_buf_mut_delete(&b, free);
+	// str_buf_mut b = cstr_buf_mut("Hello", 5, calloc, realloc);
+	// str_buf c = cstr_buf("happy", 10, calloc);
+	// str a = cstr("this is cool");
 
+	// printf("%d\n%d\n%d\n", cstr_contains(&b, cstr("Hello")), cstr_contains(&a, cstr("cool")), cstr_contains(&c, cstr("happy")));
   	return 0;
 }
