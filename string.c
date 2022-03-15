@@ -23,7 +23,7 @@ void str_error_log(const char *file, const char *function, int line, char *msg){
 
 #define LOG(msg) str_error_log(__FILE__, __FUNCTION__, __LINE__, msg)
 
-#ifdef WI32
+#ifdef WIN32
 // allocater type ---		  n elements     sizeof element flags
 typedef void *(* allocater_t)(unsigned long, unsigned long, unsigned long);
 
@@ -72,11 +72,12 @@ typedef struct string_mutable_buffer{
 	reallocater_t reallocater;
 } str_buf_mut;
 
-unsigned long str_strlen(char *str){
+s_size str_strlen(char *str){
 	unsigned long length = 0;
 	while(str[length] != '\0'){length++;}
 	return length;
 }
+
 
 // Check if string is of traditional c type
 #define IS_C_STRING(x) _Generic((x), char *: 1, unsigned char *: 1, void *: 1, default: 0)
@@ -85,11 +86,7 @@ unsigned long str_strlen(char *str){
 #define cstr(str_) (IS_C_STRING(str_) ? ((str) {(char *) str_, str_strlen(str_)}) : ((str) { 0 }))
 
 // Strlen for norrmal c string and new data type
-#define STRLEN(str_) _Generic((str_), str: str_.length, str_buf: str_.length, default: 0)
-#define STRLEN_GENERIC(str_) (str_strlen(str_))
-
-// Get generic string
-#define generic_str(str_) _Generic((str_), str: str_.data, str_buf: str_.data, str_buf_mut: str_.data, default: "")
+#define STRLEN(str_) _Generic((str_), str: str_.length, str_buf: str_.length, default: str_strlen(str_))
 
 bool str_contains(str *str_, str sequence){
 	RETURN_FALSE_ON_NULL(str_)
@@ -255,7 +252,7 @@ void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
 
 	// if there is not enough space
 	if(bytes_left < str_.length){
-		s_size new_capacity =  str_buf_mut_->capacity + (str_.length - bytes_left);
+		s_size new_capacity = str_buf_mut_->capacity + (str_.length - bytes_left);
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
@@ -266,6 +263,63 @@ void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
 		str_buf_mut_->length++;
 	}
 }
+
+void str_buf_mut_remove(str_buf_mut *str_buf_mut_, s_size lower_index, s_size upper_index){
+	RETURN_VOID_ON_NULL(str_buf_mut_)
+
+
+}
+
+s_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
+	RETURN_ZERO_ON_NULL(str_buf_mut_)
+
+	if(sequence.length == 0) return 0;
+
+	s_size sequence_count = 0;
+	s_size counter = 0;
+
+	for(s_size i = 0;i < str_buf_mut_->length;i++){
+		if(counter == sequence.length){
+			sequence_count++;
+			counter = 0;
+		}
+
+		if(str_buf_mut_->data[i] == sequence.data[counter]){
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	if(counter) sequence_count++;
+
+	return sequence_count;
+}
+
+// Count -> How often the sequence is to be replaced starting from the beginning
+void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_size count){
+	RETURN_VOID_ON_NULL(str_buf_mut_)
+
+	s_size old_str_count;
+
+	old_str_count = str_buf_mut_count(str_buf_mut_, old_str);
+
+	if(old_str_count == 0) return;
+
+	s_size length_after_cut = str_buf_mut_->length - (count * old_str.length);
+	s_size new_str_size = new_str.length * count;
+	
+	// if sum of new_str is greater than the capacity after subtracting the old string
+	if(length_after_cut + new_str_size > str_buf_mut_->capacity){
+		s_size new_capacity = str_buf_mut_->capacity + (new_str_size - length_after_cut);
+		str_buf_mut_realloc(str_buf_mut_, new_capacity);
+	}
+
+	// TODO HIER WEITER MACHEN
+}
+
 
 bool str_buf_mut_contains(str_buf_mut *str_buf_mut_, str sequence){
 	RETURN_FALSE_ON_NULL(str_buf_mut_)
@@ -303,10 +357,12 @@ void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
 }
 
 // Template for str_buf and str_buf_mut
+#define generic_str(str_) _Generic((str_), str: str_.data, str_buf: str_.data, str_buf_mut: str_.data, default: "")
 #define cstr_delete(str_buf_x, deallocater) _Generic(str_buf_x, str_buf *: str_buf_delete, str_buf_mut *: str_buf_mut_delete)(str_buf_x, deallocater)
 #define cstr_append(str_buf_x, str_) _Generic(str_buf_x, str_buf *: str_buf_append, str_buf_mut *: str_buf_mut_append)(str_buf_x, str_)
 #define cstr_insert(str_buf_x, str_, index) _Generic(str_buf_x, str_buf *: str_buf_insert, str_buf_mut *: str_buf_mut_insert)(str_buf_x, str_, index)
 #define cstr_contains(str_buf_x, sequence) _Generic(str_buf_x, str *: str_contains, str_buf *: str_buf_contains, str_buf_mut *: str_buf_mut_contains)(str_buf_x, sequence)
+
 
 int main (int argc, char *argv[])
 {
@@ -341,9 +397,9 @@ int main (int argc, char *argv[])
 
 	// cstr_delete(&c, free);
 
-	// str_buf_mut b = cstr_buf_mut("Hello", 5, calloc, realloc);
-	// str_buf c = cstr_buf("happy", 10, calloc);
-	// str a = cstr("this is cool");
+	str_buf_mut b = cstr_buf_mut("wwwa", 300, calloc, realloc);
+	str_buf x = cstr_buf("sff", 10, calloc);
+
 
 	// printf("%d\n%d\n%d\n", cstr_contains(&b, cstr("Hello")), cstr_contains(&a, cstr("cool")), cstr_contains(&c, cstr("happy")));
   	return 0;
