@@ -78,6 +78,8 @@ s_size str_strlen(char *str){
 	return length;
 }
 
+#define cstr_print(str_buf) fwrite(str_buf.data, str_buf.length, sizeof(char), stdout)
+#define cstr_debug_print(str_buf) cstr_print(str_buf); fprintf(stdout, "\nLength: %lu --- Capacity: %lu\n", str_buf.length, str_buf.capacity)
 
 // Check if string is of traditional c type
 #define IS_C_STRING(x) _Generic((x), char *: 1, unsigned char *: 1, void *: 1, default: 0)
@@ -173,7 +175,6 @@ void str_buf_remove(str_buf *str_buf, s_size start, s_size end){
 	if(start > end || end >= str_buf->length) return;
 
 	s_size shorting = (end - start) + 1;
-	s_size new_length = str_buf->length - shorting;
 
 	for(s_size i = end + 1;i < str_buf->length;i++){
 		str_buf->data[i - shorting] = str_buf->data[i];
@@ -323,7 +324,6 @@ void str_buf_mut_remove(str_buf_mut *str_buf_mut_, s_size start, s_size end){
 	if(start > end || end >= str_buf_mut_->length) return;
 
 	s_size shorting = (end - start) + 1;
-	s_size new_length = str_buf_mut_->length - shorting;
 
 	for(s_size i = end + 1;i < str_buf_mut_->length;i++){
 		str_buf_mut_->data[i - shorting] = str_buf_mut_->data[i];
@@ -335,6 +335,7 @@ void str_buf_mut_remove(str_buf_mut *str_buf_mut_, s_size start, s_size end){
 // Count -> How often the sequence is to be replaced starting from the beginning
 void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_size count){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
+	if(count == 0) return;
 
 	s_size old_str_count;
 
@@ -342,12 +343,12 @@ void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_
 
 	if(old_str_count == 0) return;
 
-	s_size length_after_cut = str_buf_mut_->length - (count * old_str.length);
-	s_size new_str_size = new_str.length * count;
+	s_size length_after_cut = str_buf_mut_->length - (old_str_count * old_str.length);
+	s_size new_str_size = new_str.length * old_str_count;
 	
 	// if sum of new_str is greater than the capacity after subtracting the old string
 	if(length_after_cut + new_str_size > str_buf_mut_->capacity){
-		s_size new_capacity = str_buf_mut_->capacity + (new_str_size - length_after_cut);
+		s_size new_capacity = new_str_size+ length_after_cut;
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
@@ -356,14 +357,31 @@ void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_
 	s_size counter = 0;
 	s_size start_index_of_old_str = 0;
 
-	for(s_size i = 0;i < str_buf_mut_->capacity;i++){
+	for(s_size i = 0;i <= str_buf_mut_->capacity;i++){
 		if(counter == old_str.length){
-			for(s_size n = i;n < labs(size_difference);n++){
-				// TODO HIER WEITER MACHEN
-				// str_buf_mut_->data[n] = 
+			// If string to be inserted is bigger than the original
+			if(size_difference > 0){
+				for(s_size n = str_buf_mut_->length - 1;n >= i;n--){
+					str_buf_mut_->data[n + size_difference] = str_buf_mut_->data[n];
+				}
+			// 1234567890
+			// 12abcd77890
+			// If string to be inserted is smaller than the orginal
+			}else if(size_difference < 0){
+				for(s_size n = i - 1;n <= str_buf_mut_->length + size_difference - 1;n++){
+					str_buf_mut_->data[n] = str_buf_mut_->data[n - size_difference];
+				}
 			}
+			str_buf_mut_->length += size_difference;
+
+			memcpy(str_buf_mut_->data + start_index_of_old_str, new_str.data, new_str.length);
+
 			sequence_count++;
+			if(sequence_count == old_str_count) break;
+			
 			counter = 0;
+			i += size_difference;
+			if(i >= str_buf_mut_->capacity) break;
 		}
 		if(str_buf_mut_->data[i] == old_str.data[counter]){
 			if(counter == 0){
@@ -459,14 +477,14 @@ int main (int argc, char *argv[])
 
 	// cstr_delete(&c, free);
 
-	str_buf_mut b = cstr_buf_mut("1234567890", 0, calloc, realloc);
+	str_buf_mut b = cstr_buf_mut("sss1234sss567890sssssx", 0, calloc, realloc);
+	cstr_debug_print(b);
 
-	// cstr_insert(&b, cstr("abcd"), 0);
+	str_buf_mut_replace(&b, cstr("x"), cstr("zzzz"), 4);
 
-	cstr_remove(&b, 9, 10);
-	fwrite(b.data, b.length, 1, stdout);
+	// cstr_print(b);
+	cstr_debug_print(b);
 	printf("\n");
-	printf("%lu\n", b.length);
 	// printf("%d\n%d\n%d\n", cstr_contains(&b, cstr("Hello")), cstr_contains(&a, cstr("cool")), cstr_contains(&c, cstr("happy")));
   	return 0;
 }
