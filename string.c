@@ -39,6 +39,9 @@ typedef void *(* reallocater_t)(void *, unsigned long);
 // deallocater type ---               buffer
 typedef void (* deallocater_t)(void *);
 
+// Check if string is of traditional c type
+#define IS_C_STRING(x) _Generic((x), char *: 1, unsigned char *: 1, void *: 1, default: 0)
+
 #ifdef ALLOCATER_WRAPPER
 void *malloc_wrapper(size_t number_of_elements, size_t size_of_element){
 	// printf("Allocating: %lu %lu\n", number_of_elements, size_of_element);
@@ -54,6 +57,7 @@ void *heap_alloc(size_t number_of_elements)
 #endif
 #endif
 
+/* ESTR STRING TYPES */
 typedef struct string{
 	char *data;
 	s_size length;
@@ -77,19 +81,8 @@ s_size str_strlen(char *str){
 	while(str[length] != '\0'){length++;}
 	return length;
 }
-
-#define cstr_print(str_buf) fwrite(str_buf.data, str_buf.length, sizeof(char), stdout)
-#define cstr_debug_print(str_buf) cstr_print(str_buf); fprintf(stdout, "\nLength: %lu --- Capacity: %lu\n", str_buf.length, str_buf.capacity)
-
-// Check if string is of traditional c type
-#define IS_C_STRING(x) _Generic((x), char *: 1, unsigned char *: 1, void *: 1, default: 0)
-
-// Creates a str struct from char * --- eg: str s = cstr("Hello");
-#define cstr(str_) (IS_C_STRING(str_) ? ((str) {(char *) str_, str_strlen(str_)}) : ((str) { 0 }))
-
-// Strlen for norrmal c string and new data type
-#define STRLEN(str_) _Generic((str_), str: str_.length, str_buf: str_.length, default: str_strlen(str_))
-
+/*------------- str FUNCTIONS -------------*/
+// Checks if the buffer contains a str sequence
 bool str_contains(str *str_, str sequence){
 	RETURN_FALSE_ON_NULL(str_)
 
@@ -114,6 +107,7 @@ bool str_contains(str *str_, str sequence){
 	return counter < sequence.length ? false : true;
 }
 
+// Counts a sequence in a string buffer
 s_size str_count(str *str_, str sequence){
 	RETURN_ZERO_ON_NULL(str_)
 
@@ -142,6 +136,7 @@ s_size str_count(str *str_, str sequence){
 	return sequence_count;
 }
 
+// Checks if the buffer starts with a specific sequence
 bool str_startswith(str *str_, str sequence){
 	RETURN_FALSE_ON_NULL(str_)
 
@@ -153,6 +148,7 @@ bool str_startswith(str *str_, str sequence){
 	return true;
 }
 
+// Checks if the buffer ends with a specific sequence
 bool str_endswith(str *str_, str sequence){
 	RETURN_FALSE_ON_NULL(str_)
 
@@ -164,7 +160,10 @@ bool str_endswith(str *str_, str sequence){
 	return true;
 }
 
-// Create a string buffer
+/*str CONSTRUCTOR*/
+#define estr(str_) (IS_C_STRING(str_) ? ((str) {(char *) str_, str_strlen(str_)}) : ((str) { 0 }))
+
+/*------------- str_buf FUNCTIONS -------------*/
 str_buf str_buf_make(s_size capacity, allocater_t allocater){
 	str_buf buff = 
 	{
@@ -178,6 +177,7 @@ str_buf str_buf_make(s_size capacity, allocater_t allocater){
 	return buff;
 }
 
+// Append a string to the end of the current buffer
 void str_buf_append(str_buf *str_buf_, str str_){
 	RETURN_VOID_ON_NULL(str_buf_)
 
@@ -189,6 +189,7 @@ void str_buf_append(str_buf *str_buf_, str str_){
 	str_buf_->length += bytes_to_copy;
 }
 
+// Inserts a string at specified index into the buffer
 void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
 	RETURN_VOID_ON_NULL(str_buf_)
 
@@ -219,6 +220,7 @@ void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
 	}
 }
 
+// Removes a sequence specified by start and end index
 void str_buf_remove(str_buf *str_buf, s_size start, s_size end){
 	RETURN_VOID_ON_NULL(str_buf)
 
@@ -233,6 +235,7 @@ void str_buf_remove(str_buf *str_buf, s_size start, s_size end){
 	str_buf->length -= shorting;
 }
 
+// Checks if the buffer contains a str sequence
 bool str_buf_contains(str_buf *str_buf_, str sequence){
 	RETURN_FALSE_ON_NULL(str_buf_)
 
@@ -257,6 +260,7 @@ bool str_buf_contains(str_buf *str_buf_, str sequence){
 	return counter < sequence.length ? false : true;
 }
 
+// Counts a sequence in a string buffer
 s_size str_buf_count(str_buf *str_buf_, str sequence){
 	RETURN_ZERO_ON_NULL(str_buf_)
 
@@ -285,6 +289,7 @@ s_size str_buf_count(str_buf *str_buf_, str sequence){
 	return sequence_count;
 }
 
+// Replaces a sequence in a buffer with a new sequence
 void str_buf_replace(str_buf *str_buf_, str old_str, str new_str, s_size count){
 	RETURN_VOID_ON_NULL(str_buf_)
 	if(count == 0) return;
@@ -347,6 +352,7 @@ void str_buf_replace(str_buf *str_buf_, str old_str, str new_str, s_size count){
 	}
 }
 
+// Checks if the buffer starts with a specific sequence
 bool str_buf_startswith(str_buf *str_buf_, str sequence){
 	RETURN_FALSE_ON_NULL(str_buf_)
 
@@ -358,6 +364,7 @@ bool str_buf_startswith(str_buf *str_buf_, str sequence){
 	return true;
 }
 
+// Checks if the buffer ends with a specific sequence
 bool str_buf_endswith(str_buf *str_buf_, str sequence){
 	RETURN_FALSE_ON_NULL(str_buf_)
 
@@ -369,25 +376,19 @@ bool str_buf_endswith(str_buf *str_buf_, str sequence){
 	return true;
 }
 
-// initialize a string buffer
-str_buf cstr_buf(char *str_, s_size capacity, allocater_t allocater){
+/*str_buf CONSTRUCTOR*/
+str_buf estr_buf(char *str_, s_size capacity, allocater_t allocater){
 	str_buf buff = str_buf_make(capacity, allocater);
-	str_buf_append(&buff, cstr(str_));
+	str_buf_append(&buff, estr(str_));
 	return buff;
 }
 
-// Initialize a string buffer
-str_buf_mut cstr_buf_mut(char *str_, s_size capacity, allocater_t allocater, reallocater_t reallocater){
-	str_buf_mut buff = str_buf_mut_make(capacity, allocater, reallocater);
-	str_buf_mut_append(&buff, cstr(str_));
-	return buff;
-}
-
+/*str_buf DECONSTRUCTOR*/
 void str_buf_delete(str_buf *str_buf_, deallocater_t deallocater){
 	deallocater(str_buf_->data);
 }
 
-// Create a mutable string buffer
+/*------------- str_buf_mut FUNCTIONS -------------*/
 str_buf_mut str_buf_mut_make(s_size capacity, allocater_t allocater, reallocater_t reallocater){
 	str_buf_mut buff = 
 	{
@@ -402,6 +403,7 @@ str_buf_mut str_buf_mut_make(s_size capacity, allocater_t allocater, reallocater
 	return buff;
 }
 
+// Reallocates the current buffer to a new size
 void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, s_size new_capacity){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
@@ -414,6 +416,7 @@ void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, s_size new_capacity){
 	str_buf_mut_->capacity = new_capacity; 
 }
 
+// Append a string to the end of the current buffer
 void str_buf_mut_append(str_buf_mut *str_buf_mut_, str str_){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
@@ -429,6 +432,7 @@ void str_buf_mut_append(str_buf_mut *str_buf_mut_, str str_){
 	str_buf_mut_->length += str_.length;
 }
 
+// Inserts a string at specified index into the buffer
 void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
@@ -459,6 +463,47 @@ void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
 	}
 }
 
+// Removes a sequence specified by start and end index
+void str_buf_mut_remove(str_buf_mut *str_buf_mut_, s_size start, s_size end){
+	RETURN_VOID_ON_NULL(str_buf_mut_)
+
+	if(start > end || end >= str_buf_mut_->length) return;
+
+	s_size shorting = (end - start) + 1;
+
+	for(s_size i = end + 1;i < str_buf_mut_->length;i++){
+		str_buf_mut_->data[i - shorting] = str_buf_mut_->data[i];
+	}
+
+	str_buf_mut_->length -= shorting;
+}
+
+// Checks if the buffer contains a str sequence
+bool str_buf_mut_contains(str_buf_mut *str_buf_mut_, str sequence){
+	RETURN_FALSE_ON_NULL(str_buf_mut_)
+
+	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
+
+	s_size counter = 0;
+
+	for(s_size i = 0;i < str_buf_mut_->length;i++){
+		if(counter == sequence.length){
+			break;
+		}
+
+		if(str_buf_mut_->data[i] == sequence.data[counter]){
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return counter < sequence.length ? false : true;
+}
+
+// Counts a sequence in a string buffer
 s_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
 	RETURN_ZERO_ON_NULL(str_buf_mut_)
 
@@ -487,21 +532,7 @@ s_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
 	return sequence_count;
 }
 
-void str_buf_mut_remove(str_buf_mut *str_buf_mut_, s_size start, s_size end){
-	RETURN_VOID_ON_NULL(str_buf_mut_)
-
-	if(start > end || end >= str_buf_mut_->length) return;
-
-	s_size shorting = (end - start) + 1;
-
-	for(s_size i = end + 1;i < str_buf_mut_->length;i++){
-		str_buf_mut_->data[i - shorting] = str_buf_mut_->data[i];
-	}
-
-	str_buf_mut_->length -= shorting;
-}
-
-// Count -> How often the sequence is to be replaced starting from the beginning
+// Replaces a sequence in a buffer with a new sequence
 void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_size count){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 	if(count == 0) return;
@@ -564,30 +595,7 @@ void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_
 	}
 }
 
-bool str_buf_mut_contains(str_buf_mut *str_buf_mut_, str sequence){
-	RETURN_FALSE_ON_NULL(str_buf_mut_)
-
-	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
-
-	s_size counter = 0;
-
-	for(s_size i = 0;i < str_buf_mut_->length;i++){
-		if(counter == sequence.length){
-			break;
-		}
-
-		if(str_buf_mut_->data[i] == sequence.data[counter]){
-			counter++;
-		} else{
-			if(counter > 0){
-				i -= counter;
-			}
-			counter = 0;
-		}
-	}
-	return counter < sequence.length ? false : true;
-}
-
+// Checks if the buffer starts with a specific sequence
 bool str_buf_mut_startswith(str_buf_mut *str_buf_mut_, str sequence){
 	RETURN_FALSE_ON_NULL(str_buf_mut_)
 
@@ -599,6 +607,7 @@ bool str_buf_mut_startswith(str_buf_mut *str_buf_mut_, str sequence){
 	return true;
 }
 
+// Checks if the buffer ends with a specific sequence
 bool str_buf_mut_endswith(str_buf_mut *str_buf_mut_, str sequence){
 	RETURN_FALSE_ON_NULL(str_buf_mut_)
 
@@ -610,38 +619,40 @@ bool str_buf_mut_endswith(str_buf_mut *str_buf_mut_, str sequence){
 	return true;
 }
 
-// Initialize a string buffer
-str_buf_mut cstr_buf_mut(char *str_, s_size capacity, allocater_t allocater, reallocater_t reallocater){
+/*str_buf_mut CONSTRUCTOR*/
+str_buf_mut estr_buf_mut(char *str_, s_size capacity, allocater_t allocater, reallocater_t reallocater){
 	str_buf_mut buff = str_buf_mut_make(capacity, allocater, reallocater);
-	str_buf_mut_append(&buff, cstr(str_));
+	str_buf_mut_append(&buff, estr(str_));
 	return buff;
 }
 
+/*str_buf_mut DECONSTRUCTOR*/
 void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
 	deallocater(str_buf_mut_->data);
 }
 
-// Template for str_buf and str_buf_mut
-#define generic_str(str_) _Generic((str_), str: str_.data, str_buf: str_.data, str_buf_mut: str_.data, default: "")
-#define cstr_delete(str_buf_x, deallocater) _Generic(str_buf_x, str_buf *: str_buf_delete, str_buf_mut *: str_buf_mut_delete)(str_buf_x, deallocater)
-#define cstr_append(str_buf_x, str_) _Generic(str_buf_x, str_buf *: str_buf_append, str_buf_mut *: str_buf_mut_append)(str_buf_x, str_)
-#define cstr_insert(str_buf_x, str_, index) _Generic(str_buf_x, str_buf *: str_buf_insert, str_buf_mut *: str_buf_mut_insert)(str_buf_x, str_, index)
-#define cstr_remove(str_buf_x, start, end) _Generic(str_buf_x, str_buf *: str_buf_remove, str_buf_mut *: str_buf_mut_remove)(str_buf_x, start, end)
-#define cstr_replace(str_buf_x, old_str, new_str, count)  _Generic(str_buf_x, str_buf *: str_buf_replace, str_buf_mut *: str_buf_mut_replace)(str_buf_x, old_str, new_str, count)
-#define cstr_contains(str_buf_x, sequence) _Generic(str_buf_x, str *: str_contains, str_buf *: str_buf_contains, str_buf_mut *: str_buf_mut_contains)(str_buf_x, sequence)
-#define cstr_count(str_buf_x, sequence) _Generic(str_buf_x, str *: str_count, str_buf *: str_buf_count, str_buf_mut *: str_buf_mut_count)(str_buf_x, sequence)
-#define cstr_startswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_startswith, str_buf *: str_buf_startswith, str_buf_mut *: str_buf_mut_startswith)(str_buf_x, sequence)
-#define cstr_endswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_endswith, str_buf *: str_buf_endswith, str_buf_mut *: str_buf_mut_endswith)(str_buf_x, sequence)
-
+/*-------------INTERFACE for fast and generic usage-------------*/
+#define estr_len(str_) _Generic((str_), str: str_.length, str_buf: str_.length, default: str_strlen(str_))
+#define estr_print(str_buf) fwrite(str_buf.data, str_buf.length, sizeof(char), stdout)
+#define estr_debug_print(str_buf) estr_print(str_buf); fprintf(stdout, "\nLength: %lu --- Capacity: %lu\n", str_buf.length, str_buf.capacity)
+#define estr_generic_str(str_) _Generic((str_), str: str_.data, str_buf: str_.data, str_buf_mut: str_.data, default: "")
+#define estr_delete(str_buf_x, deallocater) _Generic(str_buf_x, str_buf *: str_buf_delete, str_buf_mut *: str_buf_mut_delete)(str_buf_x, deallocater)
+#define estr_append(str_buf_x, str_) _Generic(str_buf_x, str_buf *: str_buf_append, str_buf_mut *: str_buf_mut_append)(str_buf_x, str_)
+#define estr_insert(str_buf_x, str_, index) _Generic(str_buf_x, str_buf *: str_buf_insert, str_buf_mut *: str_buf_mut_insert)(str_buf_x, str_, index)
+#define estr_remove(str_buf_x, start, end) _Generic(str_buf_x, str_buf *: str_buf_remove, str_buf_mut *: str_buf_mut_remove)(str_buf_x, start, end)
+#define estr_replace(str_buf_x, old_str, new_str, count)  _Generic(str_buf_x, str_buf *: str_buf_replace, str_buf_mut *: str_buf_mut_replace)(str_buf_x, old_str, new_str, count)
+#define estr_contains(str_buf_x, sequence) _Generic(str_buf_x, str *: str_contains, str_buf *: str_buf_contains, str_buf_mut *: str_buf_mut_contains)(str_buf_x, sequence)
+#define estr_count(str_buf_x, sequence) _Generic(str_buf_x, str *: str_count, str_buf *: str_buf_count, str_buf_mut *: str_buf_mut_count)(str_buf_x, sequence)
+#define estr_startswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_startswith, str_buf *: str_buf_startswith, str_buf_mut *: str_buf_mut_startswith)(str_buf_x, sequence)
+#define estr_endswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_endswith, str_buf *: str_buf_endswith, str_buf_mut *: str_buf_mut_endswith)(str_buf_x, sequence)
+	
 
 int main (int argc, char *argv[])
 {
-	str_buf_mut b = cstr_buf_mut("hello", 0, calloc, realloc);
-	cstr_debug_print(b);
-
-	printf("%d\n", str_buf_mut_endswith(&b, cstr("llo")));
-
-	cstr_delete(&b, free);
-
+	str_buf_mut s = estr_buf_mut("Hello, world", 0, calloc, realloc);	
+	printf("%s\n", estr_generic_str(s));
+	estr_append(&s, estr(" this is frank from vs code"));
+	printf("%s\n", estr_generic_str(s));
+	estr_delete(&s, free);
   	return 0;
 }
