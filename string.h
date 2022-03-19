@@ -8,14 +8,7 @@
 #define RETURN_ZERO_ON_NULL(x) if(x == NULL) return 0;
 
 typedef unsigned long s_size;
-
-// #ifndef TRUE
-// #define TRUE (1)
-// #endif
-
-// #ifndef FALSE
-// #define FALSE (0)
-// #endif
+typedef long s_int_size;
 
 void str_error_log(const char *file, const char *function, int line, char *msg){
 	fprintf(stderr, "%s: In function '%s'\n%s:%d: error: %s\n", file, function, file, line, msg);
@@ -28,7 +21,7 @@ void str_error_log(const char *file, const char *function, int line, char *msg){
 typedef void *(* allocater_t)(unsigned long, unsigned long, unsigned long);
 
 // TODO
-typedef void(* deallocater_t)(void *, unsigned long) 
+typedef void(* deallocater_t)(void *, unsigned long);
 #endif
 // allocater type ---		  n elements     sizeof element
 typedef void *(* allocater_t)(unsigned long, unsigned long);
@@ -36,7 +29,7 @@ typedef void *(* allocater_t)(unsigned long, unsigned long);
 // reallocater type ---			buffer  size
 typedef void *(* reallocater_t)(void *, unsigned long);
 
-// deallocater type ---               buffer
+// deallocater type ---        buffer
 typedef void (* deallocater_t)(void *);
 
 // Check if string is of traditional c type
@@ -160,6 +153,56 @@ bool str_endswith(str *str_, str sequence){
 	return true;
 }
 
+// Finds the first occurence of a sequence in a string and returns the index
+s_int_size str_find_first_no_pointer(str str_buf_, str sequence){
+	s_size start_index_of_sequence;
+	s_size counter = 0;
+
+	for(s_size i = 0;i <= str_buf_.length;i++){
+		if(counter == sequence.length){
+			return start_index_of_sequence;
+		}
+
+		if(str_buf_.data[i] == sequence.data[counter]){
+			if(counter == 0){
+				start_index_of_sequence = i;
+			}
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return -1;
+}
+
+// Finds the first occurence of a sequence in a string and returns the index
+s_int_size str_find_first(str *str_buf_, str sequence){
+	s_size start_index_of_sequence;
+	s_size counter = 0;
+
+	for(s_size i = 0;i <= str_buf_->length;i++){
+		if(counter == sequence.length){
+			return start_index_of_sequence;
+		}
+
+		if(str_buf_->data[i] == sequence.data[counter]){
+			if(counter == 0){
+				start_index_of_sequence = i;
+			}
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return -1;
+}
+
 /*------------- str_buf FUNCTIONS -------------*/
 str_buf str_buf_make(s_size capacity, allocater_t allocater){
 	str_buf buff = 
@@ -181,6 +224,10 @@ void str_buf_append(str_buf *str_buf_, str str_){
 	s_size bytes_left = str_buf_->capacity - str_buf_->length;
 	s_size bytes_to_copy = (bytes_left >= str_.length) ? str_.length : str_.length - (str_.length - bytes_left);
 
+	if(bytes_to_copy == 0){
+		LOG("Not enough capacity");
+		return;
+	}
 	memcpy(str_buf_->data + str_buf_->length, str_.data, bytes_to_copy);
 
 	str_buf_->length += bytes_to_copy;
@@ -373,6 +420,32 @@ bool str_buf_endswith(str_buf *str_buf_, str sequence){
 	return true;
 }
 
+s_int_size str_buf_find_first(str_buf_mut *str_buf_, str sequence){
+	RETURN_ZERO_ON_NULL(str_buf_)
+
+	s_size start_index_of_sequence;
+	s_size counter = 0;
+
+	for(s_size i = 0;i <= str_buf_->length;i++){
+		if(counter == sequence.length){
+			return start_index_of_sequence;
+		}
+
+		if(str_buf_->data[i] == sequence.data[counter]){
+			if(counter == 0){
+				start_index_of_sequence = i;
+			}
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return -1;
+}
+
 /*str_buf DECONSTRUCTOR*/
 void str_buf_delete(str_buf *str_buf_, deallocater_t deallocater){
 	deallocater(str_buf_->data);
@@ -397,7 +470,12 @@ str_buf_mut str_buf_mut_make(s_size capacity, allocater_t allocater, reallocater
 void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, s_size new_capacity){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
-	char *temporary = str_buf_mut_->reallocater(str_buf_mut_->data, new_capacity);
+	if(str_buf_mut_->reallocater == NULL){
+		LOG("No reallocater was provided");
+		return;
+	}
+
+	char *temporary = (char *) str_buf_mut_->reallocater(str_buf_mut_->data, new_capacity);
 	if(temporary == NULL){
 		LOG("Could not reallocate");
 		return;
@@ -538,7 +616,7 @@ void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_
 	
 	// if sum of new_str is greater than the capacity after subtracting the old string
 	if(length_after_cut + new_str_size > str_buf_mut_->capacity){
-		s_size new_capacity = new_str_size+ length_after_cut;
+		s_size new_capacity = new_str_size + length_after_cut;
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
@@ -609,6 +687,32 @@ bool str_buf_mut_endswith(str_buf_mut *str_buf_mut_, str sequence){
 	return true;
 }
 
+s_int_size str_buf_mut_find_first(str_buf_mut *str_buf_mut_, str sequence){
+	RETURN_ZERO_ON_NULL(str_buf_mut_)
+
+	s_size start_index_of_sequence;
+	s_size counter = 0;
+
+	for(s_size i = 0;i <= str_buf_mut_->length;i++){
+		if(counter == sequence.length){
+			return start_index_of_sequence;
+		}
+
+		if(str_buf_mut_->data[i] == sequence.data[counter]){
+			if(counter == 0){
+				start_index_of_sequence = i;
+			}
+			counter++;
+		} else{
+			if(counter > 0){
+				i -= counter;
+			}
+			counter = 0;
+		}
+	}
+	return -1;
+}
+
 /*str_buf_mut DECONSTRUCTOR*/
 void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
 	deallocater(str_buf_mut_->data);
@@ -671,11 +775,6 @@ str_buf_mut estr_buf_mut(char *str_, s_size capacity, allocater_t allocater, rea
 
 // Checks if the buffer in an estr object ends with a specific sequence
 #define estr_endswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_endswith, str_buf *: str_buf_endswith, str_buf_mut *: str_buf_mut_endswith)(str_buf_x, sequence)
-	
-// int main (int argc, char *argv[])
-// {
 
-
-
-//   	return 0;
-// }
+// Finds the first occurence of a sequence in the string and returns the indexc
+#define cstr_find_first(str_buf_x, sequence) _Generic(str_buf_x, str : str_find_first_no_pointer, str *: str_find_first, str_buf *: str_buf_find_first, str_buf_mut *: str_buf_mut_find_first)(str_buf_x, sequence)
