@@ -160,9 +160,6 @@ bool str_endswith(str *str_, str sequence){
 	return true;
 }
 
-/*str CONSTRUCTOR*/
-#define estr(str_) (IS_C_STRING(str_) ? ((str) {(char *) str_, str_strlen(str_)}) : ((str) { 0 }))
-
 /*------------- str_buf FUNCTIONS -------------*/
 str_buf str_buf_make(s_size capacity, allocater_t allocater){
 	str_buf buff = 
@@ -374,13 +371,6 @@ bool str_buf_endswith(str_buf *str_buf_, str sequence){
 		if(str_buf_->data[i] != sequence.data[i - (str_buf_->length - sequence.length)]) return false;
 	}
 	return true;
-}
-
-/*str_buf CONSTRUCTOR*/
-str_buf estr_buf(char *str_, s_size capacity, allocater_t allocater){
-	str_buf buff = str_buf_make(capacity, allocater);
-	str_buf_append(&buff, estr(str_));
-	return buff;
 }
 
 /*str_buf DECONSTRUCTOR*/
@@ -619,6 +609,23 @@ bool str_buf_mut_endswith(str_buf_mut *str_buf_mut_, str sequence){
 	return true;
 }
 
+/*str_buf_mut DECONSTRUCTOR*/
+void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
+	deallocater(str_buf_mut_->data);
+}
+
+/*-------------INTERFACE for fast and generic usage-------------*/
+
+/*str CONSTRUCTOR*/
+#define estr(str_) (IS_C_STRING(str_) ? ((str) {(char *) str_, str_strlen(str_)}) : ((str) { 0 }))
+
+/*str_buf CONSTRUCTOR*/
+str_buf estr_buf(char *str_, s_size capacity, allocater_t allocater){
+	str_buf buff = str_buf_make(capacity, allocater);
+	str_buf_append(&buff, estr(str_));
+	return buff;
+}
+
 /*str_buf_mut CONSTRUCTOR*/
 str_buf_mut estr_buf_mut(char *str_, s_size capacity, allocater_t allocater, reallocater_t reallocater){
 	str_buf_mut buff = str_buf_mut_make(capacity, allocater, reallocater);
@@ -626,33 +633,49 @@ str_buf_mut estr_buf_mut(char *str_, s_size capacity, allocater_t allocater, rea
 	return buff;
 }
 
-/*str_buf_mut DECONSTRUCTOR*/
-void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
-	deallocater(str_buf_mut_->data);
-}
-
-/*-------------INTERFACE for fast and generic usage-------------*/
+// Returns the length of an estr object
 #define estr_len(str_) _Generic((str_), str: str_.length, str_buf: str_.length, default: str_strlen(str_))
+
+// Prints the contents of a estr object to the screen
 #define estr_print(str_buf) fwrite(str_buf.data, str_buf.length, sizeof(char), stdout)
+
+// Prints the contents and the length and capacity
 #define estr_debug_print(str_buf) estr_print(str_buf); fprintf(stdout, "\nLength: %lu --- Capacity: %lu\n", str_buf.length, str_buf.capacity)
+
+// Returns a statement with the char * value of the object
 #define estr_generic_str(str_) _Generic((str_), str: str_.data, str_buf: str_.data, str_buf_mut: str_.data, default: "")
+
+// Delets a estr object with a given deconstructor
 #define estr_delete(str_buf_x, deallocater) _Generic(str_buf_x, str_buf *: str_buf_delete, str_buf_mut *: str_buf_mut_delete)(str_buf_x, deallocater)
+
+// Appends a string to the end of an estr object
 #define estr_append(str_buf_x, str_) _Generic(str_buf_x, str_buf *: str_buf_append, str_buf_mut *: str_buf_mut_append)(str_buf_x, str_)
+
+// Inserts a sequence into an estr object at a given index
 #define estr_insert(str_buf_x, str_, index) _Generic(str_buf_x, str_buf *: str_buf_insert, str_buf_mut *: str_buf_mut_insert)(str_buf_x, str_, index)
+
+// Removes a sequence in an estr object especified by start and end index
 #define estr_remove(str_buf_x, start, end) _Generic(str_buf_x, str_buf *: str_buf_remove, str_buf_mut *: str_buf_mut_remove)(str_buf_x, start, end)
+
+// Replaces a sequence in an estr object with a new sequence
 #define estr_replace(str_buf_x, old_str, new_str, count)  _Generic(str_buf_x, str_buf *: str_buf_replace, str_buf_mut *: str_buf_mut_replace)(str_buf_x, old_str, new_str, count)
+
+// Checks if an estr object contains a certain str sequence
 #define estr_contains(str_buf_x, sequence) _Generic(str_buf_x, str *: str_contains, str_buf *: str_buf_contains, str_buf_mut *: str_buf_mut_contains)(str_buf_x, sequence)
+
+// Counts a sequence in an estr object string buffer
 #define estr_count(str_buf_x, sequence) _Generic(str_buf_x, str *: str_count, str_buf *: str_buf_count, str_buf_mut *: str_buf_mut_count)(str_buf_x, sequence)
+
+// Checks if the buffer in an estr object starts with a specific sequence
 #define estr_startswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_startswith, str_buf *: str_buf_startswith, str_buf_mut *: str_buf_mut_startswith)(str_buf_x, sequence)
+
+// Checks if the buffer in an estr object ends with a specific sequence
 #define estr_endswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_endswith, str_buf *: str_buf_endswith, str_buf_mut *: str_buf_mut_endswith)(str_buf_x, sequence)
 	
+// int main (int argc, char *argv[])
+// {
 
-int main (int argc, char *argv[])
-{
-	str_buf_mut s = estr_buf_mut("Hello, world", 0, calloc, realloc);	
-	printf("%s\n", estr_generic_str(s));
-	estr_append(&s, estr(" this is frank from vs code"));
-	printf("%s\n", estr_generic_str(s));
-	estr_delete(&s, free);
-  	return 0;
-}
+
+
+//   	return 0;
+// }
