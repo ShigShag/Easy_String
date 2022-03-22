@@ -7,8 +7,17 @@
 #define RETURN_FALSE_ON_NULL(x) if(x == NULL) return false;
 #define RETURN_ZERO_ON_NULL(x) if(x == NULL) return 0;
 
-typedef unsigned long s_size;
-typedef long s_int_size;
+#define ESTR_INVALID_INDEX (-1)
+
+// Macro name generation
+#define estr_concat__(a, b) a##b
+#define estr_concat(a, b) estr_concat__(a, b)
+
+// estr generate name
+#define estr_gmn(x) estr_concat(estr_macro_name, estr_concat(x, __LINE__))
+
+typedef unsigned long e_size;
+typedef long e_index;
 
 void str_error_log(const char *file, const char *function, int line, char *msg){
 	fprintf(stderr, "%s: In function '%s'\n%s:%d: error: %s\n", file, function, file, line, msg);
@@ -53,23 +62,23 @@ void *heap_alloc(size_t number_of_elements)
 /* ESTR STRING TYPES */
 typedef struct string{
 	char *data;
-	s_size length;
+	e_size length;
 } str;
 
 typedef struct string_buffer{
 	char *data;
-	s_size length;
-	s_size capacity;
+	e_size length;
+	e_size capacity;
 } str_buf;
 
 typedef struct string_mutable_buffer{
 	char *data;
-	s_size length;
-	s_size capacity;
+	e_size length;
+	e_size capacity;
 	reallocater_t reallocater;
 } str_buf_mut;
 
-s_size str_strlen(char *str){
+e_size str_strlen(char *str){
 	unsigned long length = 0;
 	while(str[length] != '\0'){length++;}
 	return length;
@@ -81,9 +90,9 @@ bool str_contains(str *str_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_->length) return false;
 
-	s_size counter = 0;
+	e_size counter = 0;
 
-	for(s_size i = 0;i < str_->length;i++){
+	for(e_size i = 0;i < str_->length;i++){
 		if(counter == sequence.length){
 			break;
 		}
@@ -101,15 +110,15 @@ bool str_contains(str *str_, str sequence){
 }
 
 // Counts a sequence in a string buffer
-s_size str_count(str *str_, str sequence){
+e_size str_count(str *str_, str sequence){
 	RETURN_ZERO_ON_NULL(str_)
 
 	if(sequence.length == 0) return 0;
 
-	s_size sequence_count = 0;
-	s_size counter = 0;
+	e_size sequence_count = 0;
+	e_size counter = 0;
 
-	for(s_size i = 0;i < str_->length;i++){
+	for(e_size i = 0;i < str_->length;i++){
 		if(counter == sequence.length){
 			sequence_count++;
 			counter = 0;
@@ -135,7 +144,7 @@ bool str_startswith(str *str_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_->length) return false;
 
-	for(s_size i = 0;i < sequence.length;i++){
+	for(e_size i = 0;i < sequence.length;i++){
 		if(str_->data[i] != sequence.data[i]) return false;
 	}
 	return true;
@@ -147,18 +156,19 @@ bool str_endswith(str *str_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_->length) return false;
 
-	for(s_size i = str_->length - sequence.length;i < str_->length;i++){
+	for(e_size i = str_->length - sequence.length;i < str_->length;i++){
 		if(str_->data[i] != sequence.data[i - (str_->length - sequence.length)]) return false;
 	}
 	return true;
 }
 
 // Finds the first occurence of a sequence in a string and returns the index
-s_int_size str_find_first_no_pointer(str str_buf_, str sequence){
-	s_size start_index_of_sequence;
-	s_size counter = 0;
+e_index str_find_first_no_pointer(str str_buf_, str sequence, e_size offset){
+	if(offset >= str_buf_.length) return ESTR_INVALID_INDEX;
+	e_size start_index_of_sequence;
+	e_size counter = 0;
 
-	for(s_size i = 0;i <= str_buf_.length;i++){
+	for(e_size i = 0;i <= str_buf_.length;i++){
 		if(counter == sequence.length){
 			return start_index_of_sequence;
 		}
@@ -179,11 +189,12 @@ s_int_size str_find_first_no_pointer(str str_buf_, str sequence){
 }
 
 // Finds the first occurence of a sequence in a string and returns the index
-s_int_size str_find_first(str *str_buf_, str sequence){
-	s_size start_index_of_sequence;
-	s_size counter = 0;
+e_index str_find_first(str *str_buf_, str sequence, e_size offset){
+	if(offset >= str_buf_->length) return ESTR_INVALID_INDEX;
+	e_size start_index_of_sequence;
+	e_size counter = 0;
 
-	for(s_size i = 0;i <= str_buf_->length;i++){
+	for(e_size i = offset;i <= str_buf_->length;i++){
 		if(counter == sequence.length){
 			return start_index_of_sequence;
 		}
@@ -204,7 +215,7 @@ s_int_size str_find_first(str *str_buf_, str sequence){
 }
 
 /*------------- str_buf FUNCTIONS -------------*/
-str_buf str_buf_make(s_size capacity, allocater_t allocater){
+str_buf str_buf_make(e_size capacity, allocater_t allocater){
 	str_buf buff = 
 	{
 		.data = (char *) allocater(capacity, sizeof(char)),
@@ -221,8 +232,8 @@ str_buf str_buf_make(s_size capacity, allocater_t allocater){
 void str_buf_append(str_buf *str_buf_, str str_){
 	RETURN_VOID_ON_NULL(str_buf_)
 
-	s_size bytes_left = str_buf_->capacity - str_buf_->length;
-	s_size bytes_to_copy = (bytes_left >= str_.length) ? str_.length : str_.length - (str_.length - bytes_left);
+	e_size bytes_left = str_buf_->capacity - str_buf_->length;
+	e_size bytes_to_copy = (bytes_left >= str_.length) ? str_.length : str_.length - (str_.length - bytes_left);
 
 	if(bytes_to_copy == 0){
 		LOG("Not enough capacity");
@@ -234,7 +245,7 @@ void str_buf_append(str_buf *str_buf_, str str_){
 }
 
 // Inserts a string at specified index into the buffer
-void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
+void str_buf_insert(str_buf *str_buf_, str str_, e_size index){
 	RETURN_VOID_ON_NULL(str_buf_)
 
 	// Check if index is within the length of the current string
@@ -243,7 +254,7 @@ void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
 		return;
 	}
 	
-	s_size bytes_left = str_buf_->capacity - str_buf_->length;
+	e_size bytes_left = str_buf_->capacity - str_buf_->length;
 
 	// if there is not enough space
 	if(bytes_left < str_.length){
@@ -251,28 +262,28 @@ void str_buf_insert(str_buf *str_buf_, str str_, s_size index){
 		return;
 	}
 
-	for(s_size i = str_buf_->length - 1;i >= index;i--){
+	for(e_size i = str_buf_->length - 1;i >= index;i--){
 		str_buf_->data[i + str_.length] = str_buf_->data[i];
 
 		// To prevent overflow if index is 0 
 		if(i == index) break;
 	}
 
-	for(s_size i = index;(i - index) != str_.length;i++){
+	for(e_size i = index;(i - index) != str_.length;i++){
 		str_buf_->data[i] = str_.data[i - index];
 		str_buf_->length++;
 	}
 }
 
 // Removes a sequence specified by start and end index
-void str_buf_remove(str_buf *str_buf, s_size start, s_size end){
+void str_buf_remove(str_buf *str_buf, e_size start, e_size end){
 	RETURN_VOID_ON_NULL(str_buf)
 
 	if(start > end || end >= str_buf->length) return;
 
-	s_size shorting = (end - start) + 1;
+	e_size shorting = (end - start) + 1;
 
-	for(s_size i = end + 1;i < str_buf->length;i++){
+	for(e_size i = end + 1;i < str_buf->length;i++){
 		str_buf->data[i - shorting] = str_buf->data[i];
 	}
 
@@ -285,9 +296,9 @@ bool str_buf_contains(str_buf *str_buf_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_buf_->length) return false;
 
-	s_size counter = 0;
+	e_size counter = 0;
 
-	for(s_size i = 0;i < str_buf_->length;i++){
+	for(e_size i = 0;i < str_buf_->length;i++){
 		if(counter == sequence.length){
 			break;
 		}
@@ -305,15 +316,15 @@ bool str_buf_contains(str_buf *str_buf_, str sequence){
 }
 
 // Counts a sequence in a string buffer
-s_size str_buf_count(str_buf *str_buf_, str sequence){
+e_size str_buf_count(str_buf *str_buf_, str sequence){
 	RETURN_ZERO_ON_NULL(str_buf_)
 
 	if(sequence.length == 0) return 0;
 
-	s_size sequence_count = 0;
-	s_size counter = 0;
+	e_size sequence_count = 0;
+	e_size counter = 0;
 
-	for(s_size i = 0;i < str_buf_->length;i++){
+	for(e_size i = 0;i < str_buf_->length;i++){
 		if(counter == sequence.length){
 			sequence_count++;
 			counter = 0;
@@ -334,18 +345,18 @@ s_size str_buf_count(str_buf *str_buf_, str sequence){
 }
 
 // Replaces a sequence in a buffer with a new sequence
-void str_buf_replace(str_buf *str_buf_, str old_str, str new_str, s_size count){
+void str_buf_replace(str_buf *str_buf_, str old_str, str new_str, e_size count){
 	RETURN_VOID_ON_NULL(str_buf_)
 	if(count == 0) return;
 
-	s_size old_str_count;
+	e_size old_str_count;
 
 	old_str_count = str_buf_count(str_buf_, old_str);
 
 	if(old_str_count == 0) return;
 
-	s_size length_after_cut = str_buf_->length - (old_str_count * old_str.length);
-	s_size new_str_size = new_str.length * old_str_count;
+	e_size length_after_cut = str_buf_->length - (old_str_count * old_str.length);
+	e_size new_str_size = new_str.length * old_str_count;
 	
 	// if sum of new_str is greater than the capacity after subtracting the old string
 	if(length_after_cut + new_str_size > str_buf_->capacity){
@@ -354,20 +365,20 @@ void str_buf_replace(str_buf *str_buf_, str old_str, str new_str, s_size count){
 	}
 
 	long size_difference = new_str.length - old_str.length;
-	s_size sequence_count = 0;
-	s_size counter = 0;
-	s_size start_index_of_old_str = 0;
+	e_size sequence_count = 0;
+	e_size counter = 0;
+	e_size start_index_of_old_str = 0;
 
-	for(s_size i = 0;i <= str_buf_->capacity;i++){
+	for(e_size i = 0;i <= str_buf_->capacity;i++){
 		if(counter == old_str.length){
 			// If string to be inserted is bigger than the original
 			if(size_difference > 0){
-				for(s_size n = str_buf_->length - 1;n >= i;n--){
+				for(e_size n = str_buf_->length - 1;n >= i;n--){
 					str_buf_->data[n + size_difference] = str_buf_->data[n];
 				}
 			// If string to be inserted is smaller than the orginal
 			}else if(size_difference < 0){
-				for(s_size n = i - 1;n <= str_buf_->length + size_difference - 1;n++){
+				for(e_size n = i - 1;n <= str_buf_->length + size_difference - 1;n++){
 					str_buf_->data[n] = str_buf_->data[n - size_difference];
 				}
 			}
@@ -402,7 +413,7 @@ bool str_buf_startswith(str_buf *str_buf_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_buf_->length) return false;
 
-	for(s_size i = 0;i < sequence.length;i++){
+	for(e_size i = 0;i < sequence.length;i++){
 		if(str_buf_->data[i] != sequence.data[i]) return false;
 	}
 	return true;
@@ -414,19 +425,19 @@ bool str_buf_endswith(str_buf *str_buf_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_buf_->length) return false;
 
-	for(s_size i = str_buf_->length - sequence.length;i < str_buf_->length;i++){
+	for(e_size i = str_buf_->length - sequence.length;i < str_buf_->length;i++){
 		if(str_buf_->data[i] != sequence.data[i - (str_buf_->length - sequence.length)]) return false;
 	}
 	return true;
 }
 
-s_int_size str_buf_find_first(str_buf_mut *str_buf_, str sequence){
-	RETURN_ZERO_ON_NULL(str_buf_)
+e_index str_buf_find_first(str_buf_mut *str_buf_, str sequence, e_size offset){
+	if(str_buf_ == NULL || offset >= str_buf_->length) return ESTR_INVALID_INDEX;
 
-	s_size start_index_of_sequence;
-	s_size counter = 0;
+	e_size start_index_of_sequence;
+	e_size counter = 0;
 
-	for(s_size i = 0;i <= str_buf_->length;i++){
+	for(e_size i = 0;i <= str_buf_->length;i++){
 		if(counter == sequence.length){
 			return start_index_of_sequence;
 		}
@@ -452,7 +463,7 @@ void str_buf_delete(str_buf *str_buf_, deallocater_t deallocater){
 }
 
 /*------------- str_buf_mut FUNCTIONS -------------*/
-str_buf_mut str_buf_mut_make(s_size capacity, allocater_t allocater, reallocater_t reallocater){
+str_buf_mut str_buf_mut_make(e_size capacity, allocater_t allocater, reallocater_t reallocater){
 	str_buf_mut buff = 
 	{
 		.data = (char *) allocater(capacity, sizeof(char)),
@@ -467,7 +478,7 @@ str_buf_mut str_buf_mut_make(s_size capacity, allocater_t allocater, reallocater
 }
 
 // Reallocates the current buffer to a new size
-void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, s_size new_capacity){
+void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, e_size new_capacity){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
 	if(str_buf_mut_->reallocater == NULL){
@@ -488,11 +499,11 @@ void str_buf_mut_realloc(str_buf_mut *str_buf_mut_, s_size new_capacity){
 void str_buf_mut_append(str_buf_mut *str_buf_mut_, str str_){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
-	s_size bytes_left = str_buf_mut_->capacity - str_buf_mut_->length;
+	e_size bytes_left = str_buf_mut_->capacity - str_buf_mut_->length;
 
 	// if there is not enough space
 	if(bytes_left < str_.length){
-		s_size new_capacity =  str_buf_mut_->capacity + (str_.length - bytes_left);
+		e_size new_capacity =  str_buf_mut_->capacity + (str_.length - bytes_left);
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
@@ -501,7 +512,7 @@ void str_buf_mut_append(str_buf_mut *str_buf_mut_, str str_){
 }
 
 // Inserts a string at specified index into the buffer
-void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
+void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, e_size index){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
 	// Check if index is within the length of the current string
@@ -510,36 +521,36 @@ void str_buf_mut_insert(str_buf_mut *str_buf_mut_, str str_, s_size index){
 		return;
 	}
 	
-	s_size bytes_left = str_buf_mut_->capacity - str_buf_mut_->length;
+	e_size bytes_left = str_buf_mut_->capacity - str_buf_mut_->length;
 
 	// if there is not enough space
 	if(bytes_left < str_.length){
-		s_size new_capacity = str_buf_mut_->capacity + (str_.length - bytes_left);
+		e_size new_capacity = str_buf_mut_->capacity + (str_.length - bytes_left);
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
-	for(s_size i = str_buf_mut_->length - 1;i >= index;i--){
+	for(e_size i = str_buf_mut_->length - 1;i >= index;i--){
 		str_buf_mut_->data[i + str_.length] = str_buf_mut_->data[i];
 
 		// To prevent overflow if index is 0 
 		if(i == index) break;
 	}
 
-	for(s_size i = index;(i - index) != str_.length;i++){
+	for(e_size i = index;(i - index) != str_.length;i++){
 		str_buf_mut_->data[i] = str_.data[i - index];
 		str_buf_mut_->length++;
 	}
 }
 
 // Removes a sequence specified by start and end index
-void str_buf_mut_remove(str_buf_mut *str_buf_mut_, s_size start, s_size end){
+void str_buf_mut_remove(str_buf_mut *str_buf_mut_, e_size start, e_size end){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 
 	if(start > end || end >= str_buf_mut_->length) return;
 
-	s_size shorting = (end - start) + 1;
+	e_size shorting = (end - start) + 1;
 
-	for(s_size i = end + 1;i < str_buf_mut_->length;i++){
+	for(e_size i = end + 1;i < str_buf_mut_->length;i++){
 		str_buf_mut_->data[i - shorting] = str_buf_mut_->data[i];
 	}
 
@@ -552,9 +563,9 @@ bool str_buf_mut_contains(str_buf_mut *str_buf_mut_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
 
-	s_size counter = 0;
+	e_size counter = 0;
 
-	for(s_size i = 0;i < str_buf_mut_->length;i++){
+	for(e_size i = 0;i < str_buf_mut_->length;i++){
 		if(counter == sequence.length){
 			break;
 		}
@@ -572,15 +583,15 @@ bool str_buf_mut_contains(str_buf_mut *str_buf_mut_, str sequence){
 }
 
 // Counts a sequence in a string buffer
-s_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
+e_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
 	RETURN_ZERO_ON_NULL(str_buf_mut_)
 
 	if(sequence.length == 0) return 0;
 
-	s_size sequence_count = 0;
-	s_size counter = 0;
+	e_size sequence_count = 0;
+	e_size counter = 0;
 
-	for(s_size i = 0;i < str_buf_mut_->length;i++){
+	for(e_size i = 0;i < str_buf_mut_->length;i++){
 		if(counter == sequence.length){
 			sequence_count++;
 			counter = 0;
@@ -601,40 +612,40 @@ s_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
 }
 
 // Replaces a sequence in a buffer with a new sequence
-void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, s_size count){
+void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, e_size count){
 	RETURN_VOID_ON_NULL(str_buf_mut_)
 	if(count == 0) return;
 
-	s_size old_str_count;
+	e_size old_str_count;
 
 	old_str_count = str_buf_mut_count(str_buf_mut_, old_str);
 
 	if(old_str_count == 0) return;
 
-	s_size length_after_cut = str_buf_mut_->length - (old_str_count * old_str.length);
-	s_size new_str_size = new_str.length * old_str_count;
+	e_size length_after_cut = str_buf_mut_->length - (old_str_count * old_str.length);
+	e_size new_str_size = new_str.length * old_str_count;
 	
 	// if sum of new_str is greater than the capacity after subtracting the old string
 	if(length_after_cut + new_str_size > str_buf_mut_->capacity){
-		s_size new_capacity = new_str_size + length_after_cut;
+		e_size new_capacity = new_str_size + length_after_cut;
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
 	long size_difference = new_str.length - old_str.length;
-	s_size sequence_count = 0;
-	s_size counter = 0;
-	s_size start_index_of_old_str = 0;
+	e_size sequence_count = 0;
+	e_size counter = 0;
+	e_size start_index_of_old_str = 0;
 
-	for(s_size i = 0;i <= str_buf_mut_->capacity;i++){
+	for(e_size i = 0;i <= str_buf_mut_->capacity;i++){
 		if(counter == old_str.length){
 			// If string to be inserted is bigger than the original
 			if(size_difference > 0){
-				for(s_size n = str_buf_mut_->length - 1;n >= i;n--){
+				for(e_size n = str_buf_mut_->length - 1;n >= i;n--){
 					str_buf_mut_->data[n + size_difference] = str_buf_mut_->data[n];
 				}
 			// If string to be inserted is smaller than the orginal
 			}else if(size_difference < 0){
-				for(s_size n = i - 1;n <= str_buf_mut_->length + size_difference - 1;n++){
+				for(e_size n = i - 1;n <= str_buf_mut_->length + size_difference - 1;n++){
 					str_buf_mut_->data[n] = str_buf_mut_->data[n - size_difference];
 				}
 			}
@@ -669,7 +680,7 @@ bool str_buf_mut_startswith(str_buf_mut *str_buf_mut_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
 
-	for(s_size i = 0;i < sequence.length;i++){
+	for(e_size i = 0;i < sequence.length;i++){
 		if(str_buf_mut_->data[i] != sequence.data[i]) return false;
 	}
 	return true;
@@ -681,19 +692,20 @@ bool str_buf_mut_endswith(str_buf_mut *str_buf_mut_, str sequence){
 
 	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
 
-	for(s_size i = str_buf_mut_->length - sequence.length;i < str_buf_mut_->length;i++){
+	for(e_size i = str_buf_mut_->length - sequence.length;i < str_buf_mut_->length;i++){
 		if(str_buf_mut_->data[i] != sequence.data[i - (str_buf_mut_->length - sequence.length)]) return false;
 	}
 	return true;
 }
 
-s_int_size str_buf_mut_find_first(str_buf_mut *str_buf_mut_, str sequence){
-	RETURN_ZERO_ON_NULL(str_buf_mut_)
+// Finds the first occurence of a sequence in the string and returns the index
+e_index str_buf_mut_find_first(str_buf_mut *str_buf_mut_, str sequence, e_size offset){
+	if(str_buf_mut_ == NULL || offset >= str_buf_mut_->length) return ESTR_INVALID_INDEX;
 
-	s_size start_index_of_sequence;
-	s_size counter = 0;
+	e_size start_index_of_sequence;
+	e_size counter = 0;
 
-	for(s_size i = 0;i <= str_buf_mut_->length;i++){
+	for(e_size i = offset;i <= str_buf_mut_->length;i++){
 		if(counter == sequence.length){
 			return start_index_of_sequence;
 		}
@@ -713,6 +725,29 @@ s_int_size str_buf_mut_find_first(str_buf_mut *str_buf_mut_, str sequence){
 	return -1;
 }
 
+// This function will return the number split of a estr object
+str str_buf_mut_split(str_buf_mut *str_buf_mut_, str split, e_size number){
+	str r_str = { 0 };
+	e_size split_counter = 0;
+	e_size start_index_of_sequence = 0;
+	e_size start_index_of_next_sequence = 0;
+	e_index start_index_of_split = 0;
+
+	while(split_counter != number){
+		start_index_of_split = str_buf_mut_find_first(str_buf_mut_, split, start_index_of_next_sequence);
+		start_index_of_sequence = start_index_of_next_sequence;
+		if(start_index_of_split == ESTR_INVALID_INDEX){
+			start_index_of_split = str_buf_mut_->length;
+			break;
+		}
+		start_index_of_next_sequence = start_index_of_split + split.length; 
+		split_counter++;
+	}
+	r_str.length = start_index_of_split - start_index_of_sequence;
+	r_str.data = str_buf_mut_->data + start_index_of_sequence;
+
+	return r_str;
+}
 /*str_buf_mut DECONSTRUCTOR*/
 void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
 	deallocater(str_buf_mut_->data);
@@ -724,14 +759,14 @@ void str_buf_mut_delete(str_buf_mut *str_buf_mut_, deallocater_t deallocater){
 #define estr(str_) (IS_C_STRING(str_) ? ((str) {(char *) str_, str_strlen(str_)}) : ((str) { 0 }))
 
 /*str_buf CONSTRUCTOR*/
-str_buf estr_buf(char *str_, s_size capacity, allocater_t allocater){
+str_buf estr_buf(char *str_, e_size capacity, allocater_t allocater){
 	str_buf buff = str_buf_make(capacity, allocater);
 	str_buf_append(&buff, estr(str_));
 	return buff;
 }
 
 /*str_buf_mut CONSTRUCTOR*/
-str_buf_mut estr_buf_mut(char *str_, s_size capacity, allocater_t allocater, reallocater_t reallocater){
+str_buf_mut estr_buf_mut(char *str_, e_size capacity, allocater_t allocater, reallocater_t reallocater){
 	str_buf_mut buff = str_buf_mut_make(capacity, allocater, reallocater);
 	str_buf_mut_append(&buff, estr(str_));
 	return buff;
@@ -743,8 +778,11 @@ str_buf_mut estr_buf_mut(char *str_, s_size capacity, allocater_t allocater, rea
 // Prints the contents of a estr object to the screen
 #define estr_print(str_buf) fwrite(str_buf.data, str_buf.length, sizeof(char), stdout)
 
+// Prints the contents and length of estr object
+#define estr_str_debug(str_) estr_print(str_); fprintf(stdout, "\tLength: %lu\n", str_.length) 
+
 // Prints the contents and the length and capacity
-#define estr_debug_print(str_buf) estr_print(str_buf); fprintf(stdout, "\nLength: %lu --- Capacity: %lu\n", str_buf.length, str_buf.capacity)
+#define estr_buf_debug_print(str_buf) estr_print(str_buf); fprintf(stdout, "\nLength: %lu --- Capacity: %lu\n", str_buf.length, str_buf.capacity)
 
 // Returns a statement with the char * value of the object
 #define estr_generic_str(str_) _Generic((str_), str: str_.data, str_buf: str_.data, str_buf_mut: str_.data, default: "")
@@ -776,5 +814,13 @@ str_buf_mut estr_buf_mut(char *str_, s_size capacity, allocater_t allocater, rea
 // Checks if the buffer in an estr object ends with a specific sequence
 #define estr_endswith(str_buf_x, sequence) _Generic(str_buf_x, str *: str_endswith, str_buf *: str_buf_endswith, str_buf_mut *: str_buf_mut_endswith)(str_buf_x, sequence)
 
-// Finds the first occurence of a sequence in the string and returns the indexc
-#define cstr_find_first(str_buf_x, sequence) _Generic(str_buf_x, str : str_find_first_no_pointer, str *: str_find_first, str_buf *: str_buf_find_first, str_buf_mut *: str_buf_mut_find_first)(str_buf_x, sequence)
+// Finds the first occurence of a sequence in the string and returns the index
+#define estr_find_first(str_buf_x, sequence, offset) _Generic(str_buf_x, str : str_find_first_no_pointer, str *: str_find_first, str_buf *: str_buf_find_first, str_buf_mut *: str_buf_mut_find_first)(str_buf_x, sequence, offset)
+
+
+// Testing for split loop
+#define estr_split(str_buf_x, split, str) \
+e_size estr_gmn(c) = estr_count(str_buf_x, split); \
+e_size estr_gmn(i) = 0; \
+str = str_buf_mut_split(str_buf_x, split, estr_gmn(i) + 1); \
+for(;estr_gmn(i) < estr_gmn(c) + 1;estr_gmn(i)++,str = str_buf_mut_split(str_buf_x, split, estr_gmn(i) + 1))
