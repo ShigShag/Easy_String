@@ -103,7 +103,7 @@ bool str_contains(str *str_, str sequence){
 	return counter < sequence.length ? false : true;
 }
 
-// Counts a sequence in a string buffer
+// Counts a non overlapping sequence in a string buffer
 e_size str_count(str *str_, str sequence){
 	RETURN_ZERO_ON_NULL(str_)
 
@@ -115,15 +115,15 @@ e_size str_count(str *str_, str sequence){
 	for(e_size i = 0;i < str_->length;i++){
 		if(counter == sequence.length){
 			sequence_count++;
-			counter = 0;
+			// counter = 0;
 		}
 
 		if(str_->data[i] == sequence.data[counter]){
 			counter++;
 		} else{
-			if(counter > 0){
-				i -= counter;
-			}
+			// if(counter > 0){
+			// 	i -= counter;
+			// }
 			counter = 0;
 		}
 	}
@@ -353,7 +353,7 @@ bool str_buf_mut_contains(str_buf_mut *str_buf_mut_, str sequence){
 	return counter < sequence.length ? false : true;
 }
 
-// Counts a sequence in a string buffer
+// Counts a non overlapping sequence in a string buffer
 e_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
 	RETURN_ZERO_ON_NULL(str_buf_mut_)
 
@@ -365,15 +365,16 @@ e_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
 	for(e_size i = 0;i < str_buf_mut_->length;i++){
 		if(counter == sequence.length){
 			sequence_count++;
-			counter = 0;
+			// counter = 0;
 		}
 
 		if(str_buf_mut_->data[i] == sequence.data[counter]){
 			counter++;
-		} else{
-			if(counter > 0){
-				i -= counter;
-			}
+		} 
+		else{
+			// if(counter > 0){
+			// 	i -= counter;
+			// }
 			counter = 0;
 		}
 	}
@@ -570,7 +571,7 @@ str_buf_mut estr_buf_mut(char *str_, e_size capacity, allocater_t allocater, rea
 // Checks if an estr object contains a certain str sequence
 #define estr_contains(str_buf_x, sequence) _Generic(str_buf_x, str *: str_contains, str_buf_mut *: str_buf_mut_contains)(str_buf_x, sequence)
 
-// Counts a sequence in an estr object string buffer
+// Counts a non overlapping sequence in an estr object string buffer
 #define estr_count(str_buf_x, sequence) _Generic(str_buf_x, str *: str_count, str_buf_mut *: str_buf_mut_count)(str_buf_x, sequence)
 
 // Checks if the buffer in an estr object starts with a specific sequence
@@ -590,4 +591,4 @@ str_buf_mut estr_buf_mut(char *str_, e_size capacity, allocater_t allocater, rea
 e_size estr_gmn(c) = estr_count(str_buf_x, split); \
 e_size estr_gmn(i) = 0; \
 str = estr_split_number(str_buf_x, split, estr_gmn(i) + 1); \
-for(;estr_gmn(i) < estr_gmn(c) + 0;estr_gmn(i)++,str = estr_split_number(str_buf_x, split, estr_gmn(i) + 1))
+for(;estr_gmn(i) < estr_gmn(c) + 1;estr_gmn(i)++,str = estr_split_number(str_buf_x, split, estr_gmn(i) + 1))
