@@ -1,20 +1,26 @@
+#ifndef EASY_STRING_H
+#define EASY_STRING_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #define RETURN_VOID_ON_NULL(x) if(x == NULL) return;
 #define RETURN_FALSE_ON_NULL(x) if(x == NULL) return false;
 #define RETURN_ZERO_ON_NULL(x) if(x == NULL) return 0;
 
+#define UTIL_ESTR_INFINITE 0xffffffffffffffff;
+
 #define ESTR_INVALID_INDEX (-1)
 
 // Macro name generation
-#define estr_concat__(a, b) a##b
-#define estr_concat(a, b) estr_concat__(a, b)
+#define util_estr_concat_implementation(a, b) a##b
+#define util_estr_concat(a, b) util_estr_concat_implementation(a, b)
 
 // estr generate name
-#define estr_gmn(x) estr_concat(estr_macro_name, estr_concat(x, __LINE__))
+#define util_estr_gmn(x) util_estr_concat(estr_macro_name, util_estr_concat(x, __LINE__))
 
 typedef unsigned long e_size;
 typedef long e_index;
@@ -32,6 +38,7 @@ typedef void *(* allocater_t)(unsigned long, unsigned long, unsigned long);
 // TODO
 typedef void(* deallocater_t)(void *, unsigned long);
 #endif
+
 // allocater type ---		  n elements     sizeof element
 typedef void *(* allocater_t)(unsigned long, unsigned long);
 
@@ -71,6 +78,8 @@ typedef struct string_mutable_buffer{
 	e_size capacity;
 	reallocater_t reallocater;
 } str_buf_mut;
+
+typedef str_buf_mut estr_buf;
 
 e_size str_strlen(char *str){
 	unsigned long length = 0;
@@ -588,7 +597,9 @@ str_buf_mut estr_buf_mut(char *str_, e_size capacity, allocater_t allocater, rea
 
 // split string
 #define estr_split(str_buf_x, split, str) \
-e_size estr_gmn(c) = estr_count(str_buf_x, split); \
-e_size estr_gmn(i) = 0; \
-str = estr_split_number(str_buf_x, split, estr_gmn(i) + 1); \
-for(;estr_gmn(i) < estr_gmn(c) + 1;estr_gmn(i)++,str = estr_split_number(str_buf_x, split, estr_gmn(i) + 1))
+e_size util_estr_gmn(c) = estr_count(str_buf_x, split); \
+e_size util_estr_gmn(i) = 0; \
+str = estr_split_number(str_buf_x, split, util_estr_gmn(i) + 1); \
+for(;util_estr_gmn(i) < util_estr_gmn(c) + 1;util_estr_gmn(i)++,str = estr_split_number(str_buf_x, split, util_estr_gmn(i) + 1))
+
+#endif
