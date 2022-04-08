@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <stdint.h>
 
 #define RETURN_VOID_ON_NULL(x) if(x == NULL) return;
 #define RETURN_FALSE_ON_NULL(x) if(x == NULL) return false;
@@ -22,8 +23,8 @@
 // estr generate name
 #define util_estr_gmn(x) util_estr_concat(estr_macro_name, util_estr_concat(x, __LINE__))
 
-typedef unsigned long e_size;
-typedef long e_index;
+typedef uint64_t e_size;
+typedef int64_t e_index;
 
 void str_error_log(const char *file, const char *function, int line, char *msg){
 	fprintf(stderr, "%s: In function '%s'\n%s:%d: error: %s\n", file, function, file, line, msg);
@@ -31,19 +32,11 @@ void str_error_log(const char *file, const char *function, int line, char *msg){
 
 #define LOG(msg) str_error_log(__FILE__, __FUNCTION__, __LINE__, msg)
 
-#ifdef WIN32
-// allocater type ---		  n elements     sizeof element flags
-typedef void *(* allocater_t)(unsigned long, unsigned long, unsigned long);
-
-// TODO
-typedef void(* deallocater_t)(void *, unsigned long);
-#endif
-
 // allocater type ---		  n elements     sizeof element
-typedef void *(* allocater_t)(unsigned long, unsigned long);
+typedef void *(* allocater_t)(uint64_t, uint64_t);
 
 // reallocater type ---			buffer  size
-typedef void *(* reallocater_t)(void *, unsigned long);
+typedef void *(* reallocater_t)(void *, uint64_t);
 
 // deallocater type ---        buffer
 typedef void (* deallocater_t)(void *);
@@ -51,19 +44,14 @@ typedef void (* deallocater_t)(void *);
 // Check if string is of traditional c type
 #define IS_C_STRING(x) _Generic((x), char *: 1, unsigned char *: 1, void *: 1, default: 0)
 
-#ifdef ALLOCATER_WRAPPER
-void *malloc_wrapper(size_t number_of_elements, size_t size_of_element){
+#ifdef ESTR_ALLOCATER_WRAPPER
+
+void *estr_malloc_wrapper(size_t number_of_elements, size_t size_of_element){
 	// printf("Allocating: %lu %lu\n", number_of_elements, size_of_element);
 	return malloc(number_of_elements * size_of_element);
 }
 
-// TODO
-#ifdef WIN32
-#include <heapapi.h>
 
-void *heap_alloc(size_t number_of_elements)
-
-#endif
 #endif
 
 /* ESTR STRING TYPES */
@@ -82,7 +70,7 @@ typedef struct string_mutable_buffer{
 typedef str_buf_mut estr_buf;
 
 e_size str_strlen(char *str){
-	unsigned long length = 0;
+	uint64_t length = 0;
 	while(str[length] != '\0'){length++;}
 	return length;
 }
@@ -374,16 +362,16 @@ e_size str_buf_mut_count(str_buf_mut *str_buf_mut_, str sequence){
 	for(e_size i = 0;i < str_buf_mut_->length;i++){
 		if(counter == sequence.length){
 			sequence_count++;
-			// counter = 0;
+			counter = 0;
 		}
 
 		if(str_buf_mut_->data[i] == sequence.data[counter]){
 			counter++;
 		} 
 		else{
-			// if(counter > 0){
-			// 	i -= counter;
-			// }
+			if(counter > 0){
+				i -= counter;
+			}
 			counter = 0;
 		}
 	}
