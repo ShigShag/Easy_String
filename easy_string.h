@@ -400,7 +400,7 @@ void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, e_
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
-	long size_difference = new_str.length - old_str.length;
+	e_size size_difference = new_str.length - old_str.length;
 	e_size sequence_count = 0;
 	e_size counter = 0;
 	e_size start_index_of_old_str = 0;
