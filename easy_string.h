@@ -400,7 +400,7 @@ void str_buf_mut_replace(str_buf_mut *str_buf_mut_, str old_str, str new_str, e_
 		str_buf_mut_realloc(str_buf_mut_, new_capacity);
 	}
 
-	e_size size_difference = new_str.length - old_str.length;
+	int64_t size_difference = new_str.length - old_str.length;
 	e_size sequence_count = 0;
 	e_size counter = 0;
 	e_size start_index_of_old_str = 0;
@@ -448,16 +448,6 @@ bool str_buf_mut_startswith(str_buf_mut *str_buf_mut_, str sequence){
 	RETURN_FALSE_ON_NULL(str_buf_mut_)
 
 	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
-
-	for(e_size i = 0;i < sequence.length;i++){
-		if(str_buf_mut_->data[i] != sequence.data[i]) return false;
-	}
-	return true;
-}
-
-// Checks if the buffer ends with a specific sequence
-bool str_buf_mut_endswith(str_buf_mut *str_buf_mut_, str sequence){
-	RETURN_FALSE_ON_NULL(str_buf_mut_)
 
 	if(sequence.length == 0 || sequence.length > str_buf_mut_->length) return false;
 
